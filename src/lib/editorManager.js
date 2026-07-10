@@ -1150,10 +1150,61 @@ async function EditorManager($header, $body) {
 	// Each spec declares related settings keys, its compartment(s), and a builder returning extension(s)
 	const cmOptionSpecs = [
 		{
-			keys: ["linenumbers", "relativeLineNumbers"],
+			keys: ["linenumbers", "relativeLineNumbers", "highlightActiveLine"],
 			compartments: [lineNumberCompartment],
 			build() {
-				return makeLineNumberExtension();
+				const {
+					linenumbers = true,
+					relativeLineNumbers = false,
+					highlightActiveLine: enableHighlight = true,
+				} = appSettings?.value || {};
+
+				const activeLineGutter = enableHighlight
+					? [highlightActiveLineGutter()]
+					: [];
+
+				const lineNumberConfig = {
+					domEventHandlers: {
+						click(view, line, event) {
+							return handleLineNumberClick(view, line, event, {
+								shiftClickSelection:
+									appSettings.value.shiftClickSelection !== false,
+							});
+						},
+					},
+				};
+
+				if (!linenumbers)
+					return EditorView.theme({
+						".cm-gutter": {
+							display: "none !important",
+							width: "0px !important",
+							minWidth: "0px !important",
+							border: "none !important",
+						},
+					});
+
+				if (!relativeLineNumbers)
+					return Prec.highest([
+						lineNumbers(lineNumberConfig),
+						...activeLineGutter,
+					]);
+
+				return Prec.highest([
+					lineNumbers({
+						...lineNumberConfig,
+						formatNumber: (lineNo, state) => {
+							try {
+								const cur = state.doc.lineAt(state.selection.main.head).number;
+								const diff = Math.abs(lineNo - cur);
+								return diff === 0 ? String(lineNo) : String(diff);
+							} catch (_) {
+								return String(lineNo);
+							}
+						},
+					}),
+					...activeLineGutter,
+				]);
 			},
 		},
 		{
@@ -1298,14 +1349,10 @@ async function EditorManager($header, $body) {
 			},
 		},
 		{
-			keys: ["highlightActiveLine", "highlightSelectionMatches"],
+			keys: ["highlightSelectionMatches"],
 			compartments: [highlightCompartment],
 			build() {
 				const ext = [];
-
-				if (appSettings.value.highlightActiveLine !== false) {
-					ext.push(highlightActiveLine());
-				}
 
 				if (appSettings.value.highlightSelectionMatches !== false) {
 					ext.push(

@@ -1,11 +1,6 @@
-import {
-	acceptCompletion,
-	closeBrackets,
-	completionKeymap,
-} from "@codemirror/autocomplete";
+import { acceptCompletion, completionKeymap } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import {
-	bracketMatching,
 	defaultHighlightStyle,
 	foldGutter,
 	indentOnInput,
@@ -29,10 +24,6 @@ import {
 export interface BaseExtensionOptions {
 	autoIndent?: boolean;
 	codeFolding?: boolean;
-	autoCloseBrackets?: boolean;
-	bracketMatching?: boolean;
-	highlightActiveLine?: boolean;
-	highlightSelectionMatches?: boolean;
 }
 
 /**
@@ -41,18 +32,8 @@ export interface BaseExtensionOptions {
 export default function createBaseExtensions(
 	options: BaseExtensionOptions = {},
 ): Extension[] {
-	const {
-		autoIndent = true,
-		codeFolding = true,
-		autoCloseBrackets = true,
-		bracketMatching: enableBracketMatching = true,
-		highlightActiveLine: enableHighlightActiveLine = true,
-		highlightSelectionMatches: enableHighlightSelectionMatches = true,
-	} = options;
-	const extensions: Extension[] = [
-		highlightSpecialChars(),
-		history(),
-	];
+	const { autoIndent = true, codeFolding = true } = options;
+	const extensions: Extension[] = [highlightSpecialChars(), history()];
 
 	if (enableHighlightActiveLine) extensions.push(highlightActiveLineGutter());
 	if (codeFolding) extensions.push(foldGutter());
@@ -63,14 +44,8 @@ export default function createBaseExtensions(
 	extensions.push(
 		syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
 	);
-	if (enableBracketMatching) extensions.push(bracketMatching());
-	if (autoCloseBrackets) extensions.push(closeBrackets());
 	extensions.push(rectangularSelection());
 	extensions.push(crosshairCursor());
-	if (enableHighlightActiveLine) extensions.push(highlightActiveLine());
-	if (enableHighlightSelectionMatches) {
-		extensions.push(highlightSelectionMatches());
-	}
 	extensions.push(
 		Prec.highest(keymap.of([{ key: "Tab", run: acceptCompletion }])),
 	);
